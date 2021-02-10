@@ -1,3 +1,14 @@
+nohup.out
+rbp/incoming/*.RData
+rbp/incoming/*.tsv
+rbp/fill-2021/*.tsv
+
+tf/ReMap/incoming/*.RData
+tf/ReMap/incoming/*gz
+
+human_RBP_binding_sites.txt
+human_RBP_binding_sites.txt.zip
+
 # History files
 .Rhistory
 .Rapp.history
