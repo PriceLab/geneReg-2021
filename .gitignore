@@ -1,3 +1,12 @@
+tf/GTRD/incoming/metaClustersByTF/*.bb
+tf/GTRD/incoming/metaClustersByTF/*.bed
+tf/GTRD/incoming/metaClustersByTFandCellType/*.bb
+tf/GTRD/incoming/metaClustersByTFandCellType/*.bed
+
+genehancer/incoming/GeneHancer_v5.0_for_ISB.zip
+genehancer/incoming/ISB/*.txt
+
+
 nohup.out
 rbp/incoming/*.RData
 rbp/incoming/*.tsv
