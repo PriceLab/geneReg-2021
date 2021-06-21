@@ -4,6 +4,7 @@ library(rtracklayer)
 library(data.table)
 library(SNPlocs.Hsapiens.dbSNP150.GRCh38)
 library(SNPlocs.Hsapiens.dbSNP144.GRCh37)
+library(EnsDb.Hsapiens.v79)
 #---------------------------------------------------------------------------------------
 
 gtex.digester = R6Class("gtex.digester",
@@ -43,7 +44,14 @@ gtex.digester = R6Class("gtex.digester",
                loc.tokens <- strsplit(tbl$variant_id, "_")
                chrom <- sub("chr", "", unlist(lapply(loc.tokens, "[", 1)))
                hg38 <- as.integer(unlist(lapply(loc.tokens, "[", 2)))
-               tbl <- data.frame(chrom=chrom, hg38=hg38, pvalue=tbl$pval_nominal,
+               ensgs <- tbl$phenotype_id
+               ensgs <- sub("\\..*$", "", ensgs)
+               symbols <- as.character(mapIds(EnsDb.Hsapiens.v79, ensgs, "SYMBOL", "GENEID"))
+               tbl <- data.frame(chrom=chrom,
+                                 hg38=hg38,
+                                 pvalue=tbl$pval_nominal,
+                                 ensg=ensgs,
+                                 geneSymbol=symbols,
                                  project=private$projectName,
                                  tissue=private$tissue,
                                  assay=private$assay,
@@ -64,7 +72,7 @@ gtex.digester = R6Class("gtex.digester",
                tbl <- private$tbl
                tbl$signature <- paste(tbl$chrom, tbl$hg38, sep=":")
                tbl.01 <- merge(tbl, tbl.snpLocs, by="signature", all.x=TRUE)               
-               tbl.new <- tbl.01[, c("chrom", "hg38", "RefSNP_id", "pvalue", "project", "tissue", "assay")]
+               tbl.new <- tbl.01[, c("chrom", "hg38", "RefSNP_id", "pvalue", "ensg", "geneSymbol","project", "tissue", "assay")]
                colnames(tbl.new)[3] <- "rsid"
                rsids <- tbl.new$rsid
                na.rsids <- which(is.na(rsids))
@@ -78,17 +86,51 @@ gtex.digester = R6Class("gtex.digester",
                colnames(tbl.hg19)[grep("pos", colnames(tbl.hg19))] <- "hg19"
                colnames(tbl.hg19)[grep("RefSNP_id", colnames(tbl.hg19))] <- "rsid"
                tbl.merged <- merge(tbl.new, tbl.hg19[, c("hg19", "rsid")], by="rsid", all.x=TRUE)
-               coi <- c("chrom", "hg19", "hg38", "rsid", "pvalue", "project", "tissue", "assay")
+
+               coi <- c("chrom", "hg19", "hg38", "rsid", "pvalue", "ensg", "geneSymbol", "project", "tissue", "assay")
                tbl <- tbl.merged[, coi]
-               browser()
                missing.hg19.pos <- which(is.na(tbl$hg19))
                printf("--- missing.hg19.pos count: %d", length(missing.hg19.pos))
                if(length(missing.hg19.pos) > 0)
                    tbl$hg19[missing.hg19.pos] <- -1
                tbl$hg19 <- as.integer(tbl$hg19)
                private$tbl <- tbl
-               } # add.hg19.snplocs
+               }, # add.hg19.snplocs
 
+           liftover.missing.hg19.pos = function(){
+               tbl.current <- private$tbl
+               tbl.missing <- subset(tbl.current, hg19==-1)[, c("chrom", "hg38", "hg38")]
+               colnames(tbl.missing) <- c("chrom", "start", "end")
+               tbl.missing$chrom <- paste0("chr", tbl.missing$chrom)
+               gr <- GRanges(tbl.missing)
+               if(!file.exists("hg38ToHg19.over.chain")){
+                  message(sprintf("downloading liftover chain file"))
+                  system("curl -O http://hgdownload.soe.ucsc.edu/goldenPath/hg38/liftOver/hg38ToHg19.over.chain.gz")
+                  system("gunzip hg38ToHg19.over.chain.gz")
+                  }
+               chain <- import.chain("hg38ToHg19.over.chain")
+               if(private$verbose) message(sprintf("--- running liftover on %d rows", nrow(tbl.missing)))
+               gr.list <-liftOver(gr, chain)
+               gr.hg19 <- unlist(gr.list)
+               tbl.hg19 <- as.data.frame(gr.hg19)[, c("seqnames", "start")]
+               tbl.hg19$hg38 <- tbl.missing$start
+               colnames(tbl.hg19) <- c("chrom", "hg19", "hg38")
+               tbl.current$chrom <- paste0("chr", tbl.current$chrom)
+               tbl.current$signature <- paste(tbl.current$chrom, tbl.current$hg38, sep=":")
+               tbl.hg19$signature <- paste(tbl.hg19$chrom, tbl.hg19$hg38, sep=":")
+
+               for(i in seq_len(nrow(tbl.hg19))) {
+                  hg19.loc <- tbl.hg19$hg19[i]
+                  sig <- tbl.hg19$signature[i]
+                  indices <- grep(sig, tbl.current$signature)
+                  tbl.current[indices, "hg19"] <- hg19.loc
+                  } # for i1          
+               deleter <- grep("signature", colnames(tbl.current))
+               if(length(deleter) > 0)
+                   tbl.current <- tbl.current[, -deleter]
+               private$tbl <- tbl.current
+               } # liftover.missing.hg19.pos
+           
            ) # public
 
        ) # class gtex.digester
