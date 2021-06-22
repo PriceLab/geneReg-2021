@@ -64,10 +64,9 @@ gtex.digester = R6Class("gtex.digester",
                }, 
 
            add.hg19.snplocs.rsid = function(){
-               if(private$verbose)
-                   message(sprintf("freading %s", private$outputFilename))
-               gr <- GRanges(seqnames=private$tbl$chrom, IRanges(private$tbl$hg38))
-               tbl.snpLocs <- as.data.frame(snpsByOverlaps(SNPlocs.Hsapiens.dbSNP150.GRCh38, gr))
+               gr <- sort(GRanges(seqnames=private$tbl$chrom, IRanges(start=private$tbl$hg38, end=private$tbl$hg38)))
+               gr.snp <- snpsByOverlaps(SNPlocs.Hsapiens.dbSNP150.GRCh38, gr)
+               tbl.snpLocs <- as.data.frame(gr.snp)
                tbl.snpLocs$signature <- paste(tbl.snpLocs$seqnames, tbl.snpLocs$pos, sep=":")
                tbl <- private$tbl
                tbl$signature <- paste(tbl$chrom, tbl$hg38, sep=":")
@@ -88,7 +87,7 @@ gtex.digester = R6Class("gtex.digester",
                tbl.merged <- merge(tbl.new, tbl.hg19[, c("hg19", "rsid")], by="rsid", all.x=TRUE)
 
                coi <- c("chrom", "hg19", "hg38", "rsid", "pvalue", "ensg", "geneSymbol", "project", "tissue", "assay")
-               tbl <- tbl.merged[, coi]
+               tbl <- unique(tbl.merged[, coi])
                missing.hg19.pos <- which(is.na(tbl$hg19))
                printf("--- missing.hg19.pos count: %d", length(missing.hg19.pos))
                if(length(missing.hg19.pos) > 0)

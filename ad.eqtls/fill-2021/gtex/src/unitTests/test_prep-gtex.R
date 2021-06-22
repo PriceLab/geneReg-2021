@@ -191,3 +191,33 @@ test_1k_file <- function()
 
 } # test_1k_file
 #---------------------------------------------------------------------------------------------------
+runFullLengthFile <- function()
+{
+    f <- "../../incoming/eqtls/Brain_Cortex.v8.EUR.signif_pairs.txt"
+    checkTrue(file.exists(f))
+    gd <- gtex.digester$new(input.filename=f,
+                            projectName="GTEx",
+                            tissue="ctx",
+                            assay="unknown",
+                            output.file.basename="gtex-brain-cortex",
+                            verbose=TRUE)
+
+    gd$extractCoreColumns()
+    tbl.01 <- gd$getCurrentTable()
+    checkEquals(dim(tbl.01), c(993005, 8))
+    gd$add.hg19.snplocs.rsid()
+    
+    tbl.02 <- gd$getCurrentTable()
+    checkEquals(dim(tbl.02), c(995504, 10))
+    checkEquals(colnames(tbl.02), c("chrom", "hg19", "hg38", "rsid", "pvalue",
+                                    "ensg", "geneSymbol", "project", "tissue", "assay"))
+    checkEquals(as.character(lapply(tbl.02, class)), 
+                c("character", "integer","integer","character","numeric","character","character",
+                  "character","character","character"))
+
+    checkEquals(length(which(is.na(tbl.02$rsid))), 70444)
+    checkEquals(length(which(tbl.02$hg19==-1)), 156182)
+
+
+} # runFullLengthFile
+#---------------------------------------------------------------------------------------------------
