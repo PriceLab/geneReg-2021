@@ -6,6 +6,7 @@ runTests <- function()
     test_ctor()
     test_extractCoreColumns()
     test_add.hg19.snplocs.rsid()
+    test_1k_file()
     
 } # runTests
 #----------------------------------------------------------------------------------------------------
@@ -146,3 +147,47 @@ test_somePuzzlingResults <- function()
     
 } # test_somePuzzlingResults
 #----------------------------------------------------------------------------------------------------
+test_1k_file <- function()
+{
+    message(sprintf("--- test_1k_file"))
+
+    f <- "../../incoming/brain-1k-Test.csv"
+    checkTrue(file.exists(f))
+    gd <- gtex.digester$new(input.filename=f,
+                            projectName="GTEx",
+                            tissue="ctx",
+                            assay="unknown",
+                            output.file.basename="gtex-brain-cortex",
+                            verbose=TRUE)
+    gd$extractCoreColumns()
+    gd$add.hg19.snplocs.rsid()
+    
+    tbl <- gd$getCurrentTable()
+    checkEquals(dim(tbl), c(1002, 10))
+    checkEquals(colnames(tbl), c("chrom", "hg19", "hg38", "rsid", "pvalue",
+                                 "ensg", "geneSymbol", "project", "tissue", "assay"))
+    checkEquals(as.character(lapply(tbl, class)), 
+                c("character", "integer","integer","character","numeric","character","character",
+                  "character","character","character"))
+
+    checkEquals(length(which(is.na(tbl$rsid))), 88)
+    checkEquals(length(which(tbl$hg19==-1)), 173)
+
+      #------------------------------------------------------------
+      # use liftover on the failed hg19 lookups
+      #------------------------------------------------------------
+    
+    gd$liftover.missing.hg19.pos()
+    tbl <- gd$getCurrentTable()
+    checkEquals(dim(tbl), c(1002, 10))
+    checkEquals(colnames(tbl), c("chrom", "hg19", "hg38", "rsid", "pvalue",
+                                 "ensg", "geneSymbol", "project", "tissue", "assay"))
+    checkEquals(as.character(lapply(tbl, class)), 
+                c("character", "integer","integer","character","numeric","character","character",
+                  "character","character","character"))
+
+    checkEquals(length(which(is.na(tbl$rsid))), 88)
+    checkEquals(length(which(tbl$hg19==-1)), 7)
+
+} # test_1k_file
+#---------------------------------------------------------------------------------------------------

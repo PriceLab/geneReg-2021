@@ -111,8 +111,12 @@ gtex.digester = R6Class("gtex.digester",
                chain <- import.chain("hg38ToHg19.over.chain")
                if(private$verbose) message(sprintf("--- running liftover on %d rows", nrow(tbl.missing)))
                gr.list <-liftOver(gr, chain)
-               gr.hg19 <- unlist(gr.list)
-               tbl.hg19 <- as.data.frame(gr.hg19)[, c("seqnames", "start")]
+               tbls.tmp <- lapply(gr.list, function(gr){
+                   if(length(gr) == 0)
+                       return(data.frame(seqnames="NA", start=-1, end=-1,  width=-1, strand="*"));;
+                   return(as.data.frame(gr))
+                   })
+               tbl.hg19 <- do.call(rbind, tbls.tmp)[, c("seqnames", "start")]
                tbl.hg19$hg38 <- tbl.missing$start
                colnames(tbl.hg19) <- c("chrom", "hg19", "hg38")
                tbl.current$chrom <- paste0("chr", tbl.current$chrom)
@@ -128,6 +132,7 @@ gtex.digester = R6Class("gtex.digester",
                deleter <- grep("signature", colnames(tbl.current))
                if(length(deleter) > 0)
                    tbl.current <- tbl.current[, -deleter]
+               tbl.current$hg19 <- as.integer(tbl.current$hg19)
                private$tbl <- tbl.current
                } # liftover.missing.hg19.pos
            
