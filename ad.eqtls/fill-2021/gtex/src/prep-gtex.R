@@ -63,8 +63,10 @@ gtex.digester = R6Class("gtex.digester",
                private$tbl
                }, 
 
-           add.hg19.snplocs.rsid = function(){
+           add.rsids.and.hg19.snplocs = function(){
                gr <- sort(GRanges(seqnames=private$tbl$chrom, IRanges(start=private$tbl$hg38, end=private$tbl$hg38)))
+               if(private$verbose)
+                   message(sprintf("--- calling snpsByOverlaps, %d ranges", length(gr)))
                gr.snp <- snpsByOverlaps(SNPlocs.Hsapiens.dbSNP150.GRCh38, gr)
                tbl.snpLocs <- as.data.frame(gr.snp)
                tbl.snpLocs$signature <- paste(tbl.snpLocs$seqnames, tbl.snpLocs$pos, sep=":")
@@ -75,11 +77,14 @@ gtex.digester = R6Class("gtex.digester",
                colnames(tbl.new)[3] <- "rsid"
                rsids <- tbl.new$rsid
                na.rsids <- which(is.na(rsids))
-               print(length(na.rsids))
+               if(private$verbose)
+                 message(sprintf("--- failed to find hg38 rsids for %d locations", length(na.rsids)))
                if(length(na.rsids) > 0){
-                   printf("--- removing %d na.rsids", length(na.rsids))
                    rsids <- rsids[(-na.rsids)]
                    }
+               if(private$verbose)
+                 message(sprintf("--- looking up hg19 locs for %d rsids", length(rsids)))
+
                x <- snpsById(SNPlocs.Hsapiens.dbSNP144.GRCh37, rsids, ifnotfound="drop")
                tbl.hg19 <- as.data.frame(x)
                colnames(tbl.hg19)[grep("pos", colnames(tbl.hg19))] <- "hg19"
@@ -89,7 +94,8 @@ gtex.digester = R6Class("gtex.digester",
                coi <- c("chrom", "hg19", "hg38", "rsid", "pvalue", "ensg", "geneSymbol", "project", "tissue", "assay")
                tbl <- unique(tbl.merged[, coi])
                missing.hg19.pos <- which(is.na(tbl$hg19))
-               printf("--- missing.hg19.pos count: %d", length(missing.hg19.pos))
+               if(private$verbose)
+                  message(sprintf("--- failed to find %d rsids in dbSNP144", length(missing.hg19.pos)))
                if(length(missing.hg19.pos) > 0)
                    tbl$hg19[missing.hg19.pos] <- -1
                tbl$hg19 <- as.integer(tbl$hg19)

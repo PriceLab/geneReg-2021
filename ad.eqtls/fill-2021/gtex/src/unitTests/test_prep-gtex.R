@@ -5,7 +5,7 @@ runTests <- function()
 {
     test_ctor()
     test_extractCoreColumns()
-    test_add.hg19.snplocs.rsid()
+    test_add.rsids.and.hg19.snplocs()
     test_1k_file()
     
 } # runTests
@@ -51,9 +51,9 @@ test_extractCoreColumns <- function()
 
 } # test_extractCoreColumns
 #----------------------------------------------------------------------------------------------------
-test_add.hg19.snplocs.rsid <- function()
+test_add.rsids.and.hg19.snplocs <- function()
 {
-    message(sprintf("--- test_add.hg19.snplocs.rsid"))
+    message(sprintf("--- test_add.rsids.and.hg19.snplocs"))
 
     f <- "../../incoming/brainSmallTest.csv"
     checkTrue(file.exists(f))
@@ -64,7 +64,7 @@ test_add.hg19.snplocs.rsid <- function()
                             output.file.basename="gtex-brain-cortex",
                             verbose=TRUE)
     gd$extractCoreColumns()
-    gd$add.hg19.snplocs.rsid()
+    gd$add.rsids.and.hg19.snplocs()
     
     tbl <- gd$getCurrentTable()
     checkEquals(dim(tbl), c(101, 10))
@@ -119,7 +119,7 @@ test_add.hg19.snplocs.rsid <- function()
        # 60  chr1 144044255 121315228 rs56399439 5.05606e-06 ENSG00000226067  CH17-118O6.2    GTEx    ctx unknown chr1:121315228
        # 93  chr1 149702931 121039576       <NA> 7.82282e-06 ENSG00000274642 CH17-472G23.1    GTEx    ctx unknown chr1:121039576
 
-} # test_add.hg19.snplocs.rsid
+} # test_add.rsids.and.hg19.snplocs
 #----------------------------------------------------------------------------------------------------
 test_somePuzzlingResults <- function()
 {
@@ -160,7 +160,7 @@ test_1k_file <- function()
                             output.file.basename="gtex-brain-cortex",
                             verbose=TRUE)
     gd$extractCoreColumns()
-    gd$add.hg19.snplocs.rsid()
+    gd$add.rsids.and.hg19.snplocs()
     
     tbl <- gd$getCurrentTable()
     checkEquals(dim(tbl), c(1002, 10))
@@ -194,6 +194,7 @@ test_1k_file <- function()
 runFullLengthFile <- function()
 {
     f <- "../../incoming/eqtls/Brain_Cortex.v8.EUR.signif_pairs.txt"
+
     checkTrue(file.exists(f))
     gd <- gtex.digester$new(input.filename=f,
                             projectName="GTEx",
@@ -205,7 +206,7 @@ runFullLengthFile <- function()
     gd$extractCoreColumns()
     tbl.01 <- gd$getCurrentTable()
     checkEquals(dim(tbl.01), c(993005, 8))
-    gd$add.hg19.snplocs.rsid()
+    gd$add.rsids.and.hg19.snplocs()
     
     tbl.02 <- gd$getCurrentTable()
     checkEquals(dim(tbl.02), c(995504, 10))
@@ -217,6 +218,9 @@ runFullLengthFile <- function()
 
     checkEquals(length(which(is.na(tbl.02$rsid))), 70444)
     checkEquals(length(which(tbl.02$hg19==-1)), 156182)
+    out.file <- "brain-cortex-ready.csv"
+    message(sprintf("writing %d lines to %s", nrow(tbl.02), out.file))
+    fwrite(tbl.02,  file=out.file)
 
 
 } # runFullLengthFile
